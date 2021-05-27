@@ -1,0 +1,24 @@
+#zonelogin{
+    background: darkcyan;
+    align: center;
+}
+
+body {
+    font-family:Calibri, sans-serif;
+    background-image: url(https://images.pexels.com/photos/956999/milky-way-starry-sky-night-sky-star-956999.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260.jpeg);
+    font-size : 20px
+
+}
+p{
+    color : white;
+}
+h1 {
+    color : white;
+}
+table {
+    border-collapse:collapse;
+}
+th,td{
+    border: 1px solid black;
+    padding : 10px;
+}

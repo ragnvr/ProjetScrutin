@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8"/>
+    <title>Galaxyvote </title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+
+        function login() {
+            let email = $("#email").val();
+            let password = $("#password").val();
+            $.ajax({
+                method: "GET",
+                dataType: "json",
+                url: "page2.php",
+                data: {"email": email, "password": password}
+            }).done(function (obj) {
+                //Si l'email du client a bien été trouvé dans le fichier participants.json
+                if (obj[0] === true) {
+                    //enregistre l'email du client dans son navigateur
+                    sessionStorage.setItem('email', email);
+                    $("#message1").html("<span class='ko' style='font-size:40px '  > Bienvenue " + obj[1] + " " + obj[2] + "  </span>");
+                    $("#affiche-candidat-election").append("<p> Entré le numéro du scrutin auquel vous voulez voter </p> " + "<input type='text'  id='numeroscrutin' >" +
+                        " <input type='button' value='Voir le scrutin' onclick=\"affiche_election(document.getElementById('numeroscrutin').value)\" /> ");
+
+                    $(".pageweb").replaceWith($("#connexionvalidate").html("<a class=\"icon-link\" href=\"pagenewscrutin.html\"><img alt = 'image+' src=\"kisspng-computer-icons-plus-sign-clip-art-plus-sign-5b4bfbdff0b3a7.2950963015317063359859-removebg-preview.png\" width = '15' height='15' ><span style='color:lightgreen;font-size: larger' >Créer un scrutin</span></a>"))
+                    $("#voirscrutinowner").append("<br><a onclick= \"voirownerscrutin()\" class=\"icon-link\" href=\"#\" ><img  alt  ='image+' src=\"kisspng-computer-icons-plus-sign-clip-art-plus-sign-5b4bfbdff0b3a7.2950963015317063359859-removebg-preview.png\" width = '15' height='15' ><span style='color:lightgreen;font-size: larger' >Voir mes scrutins crées </span></a>")
+
+                } else {
+                    console.log("Je suis dans le else")
+                    $("#message").html("<span class='ko' style=\"color:white\"> Mail ou Mot de passe invalide   </span>");
+                }
+
+            }).fail(function (e) {
+                console.log(e);
+                $("#message").html("<span class='ko' style=\"color:white\"> Error: network problem  </span>");
+            });
+        }
+
+
+        //Affiche les scrutins que le client a crée
+        function voirownerscrutin() {
+
+            //$("#affiche-candidat-election").html('')
+            console.log("je suis dans voirownerscrutin")
+            let email = sessionStorage.getItem('email')
+            console.log(email)
+            $.ajax({
+                method: "GET",
+                dataType: "json",
+                url: "voirownerscrutin.php",
+                data: {"email": email}
+            }).done(function (obj) {
+                //obj continent tout les scrutins
+                $("#ownerscrutin").html('')
+                console.log(obj)
+                //Si il a crée des scrutins
+                if (obj.length !== 0) {
+                    console.log("j'ai recupér des owner scrutin")
+                    var nid = 0
+                    var n = 1
+                    //Parcours les scrutins
+                    for (nid; nid < obj.length; nid++) {
+                        var nbScrutin = "scrutin-" + nid;
+                        //Affiche la question ,le numerod du scrutin et le taux de participation
+                        $('#ownerscrutin').append(" <div id=" + nbScrutin + " class =" + obj[nid].nbscrutin + " > <p  >Numéro scrutin :  " + obj[nid].nbscrutin + "<br /> <u>La question :  " + obj[nid].thequestion + " </u></p> " +
+                            "<p> Taux de participation : " + obj[nid].tauxdeparticiaption + " %</p> </div> ");
+                        var nbAnswer = "answer-" + nid;
+
+                        //Teste si le scrutin a des réponses
+                        if (obj[nid].answer) {
+                            // Si le scrutin est clot
+                            if (obj[nid].validballot === "false") {
+                                var tabtauxreponse = Object.keys(obj[nid].nbreponse)
+                                $('#' + nbScrutin).append("<p id=" + nbAnswer + ">Le taux de participation pour chaque réponse: <p/>")
+                                //Affiche le taux de participation de chaque réponse et le nombre absolue
+                                for (var j = 0; j < obj[nid].answer.length; j++) {
+                                    var taux = obj[nid].nbreponse[tabtauxreponse[j]]
+                                    taux = (taux / obj[nid].nbvote) * 100;
+                                    $('#' + nbScrutin).append(" <p> - " + obj[nid].answer[j] + " : " + taux + " %  ( " + obj[nid].nbreponse[tabtauxreponse[j]] + " vote(s) ) </p>");
+
+                                }
+                                // le scrutin n'est pas clot
+                            } else {
+
+                                $('#' + nbScrutin).append(" <span style='color:white; font-size :20px' id=" + nbAnswer + ">Les réponses: </span> ");
+                                //Affiche les réponses du scrutin
+                                for (var j = 0; j < obj[nid].answer.length; j++) {
+                                    $('#' + nbAnswer).append("<span style='color:white'> <br><br> - " + obj[nid].answer[j] + "</span><br />");
+
+                                }
+                            }
+
+                            var namebuttonclot = 'buttonclot-' + nbScrutin
+
+                            //Teste si le scrutin est clot
+                            if (obj[nid].validballot === "true") {
+                                $('#' + nbScrutin).append("<br><span style='color:white; font-size: 30px'> Une fois le scrutin clôt, vous ne pourrez plus revenir ! </span> <br><br>")
+                            }
+
+                            //Le boutton pour clor le scrutin
+                            $('#' + nbScrutin).append("<input  type='button' onclick='clot_scrutin(" + obj[nid].nbscrutin + ", this.name)' name=" + namebuttonclot + "  id=" + namebuttonclot + "  value ='Clor le scrutin'  > " + "</p>");
+
+                            // si le scrutin est clot
+                            if (obj[nid].validballot === "false") {
+                                $("[name =" + namebuttonclot + "]").attr('disabled', 'disabled');
+                                $('#' + nbScrutin).append("<p> Vous avez clot le scrutin </p>")
+
+                            }
+                            $('#' + nbScrutin).append("<p>---------------------------------------------------------------------------------------------</p>")
+                        }
+                        n++
+                    }
+                    // $("#affiche-candidat-election").html("<p> Votre vote a bien été prise en compte </p>")
+                } else {
+                    console.log("j'ai rien recupére")
+                    //Si le client n'a aucun scrutin
+                    $('#ownerscrutin').append("<p>Vous n'avez créez aucun scrutin </p>")
+                }
+
+            }).fail(function (e) {
+                console.log(e + "erreur");
+                $("#message").html("<span class='ko' style=\"color:white\"> Error: network problem  </span>");
+            });
+
+
+        }
+
+        //Permet de clore le scrutin
+        function clot_scrutin(e, name) {
+            var nb = e;
+            $.ajax({
+                method: "GET",
+                dataType: "json",
+                url: "clot_scrutin.php",
+                data: {"numeroscrutin": nb}
+            }).done(function (obj) {
+                    //Si le scrutine est clot
+                    if (obj === "true") {
+                        //si on clot le scrutin on desactive le boutton pour clore
+                        $("[name = " + name + " ]").attr('disabled', 'disabled');
+                    }
+                }
+            ).fail(function (e) {
+                console.log(e);
+            });
+        }
+
+
+        let peutvoter = "";
+        let numeroscrutin;
+        let tableauxdesnbreponses;
+        let tableaudesreponses;
+        let procuration;
+        let procurationinfunction;
+
+        //Affiche les scrutins auquel on est participants
+        function affiche_election(e) {
+            // console.log("affiche election  ")
+            $("#ownerscrutin").html('')
+            let email = sessionStorage.getItem('email')
+            numeroscrutin = e;
+            $.ajax({
+                method: "GET",
+                dataType: "json",
+                url: "affichescrutin.php",
+                data: {"email": email, "numeroscrutin": numeroscrutin}
+            }).done(function (obj) {
+                    $("#affchescrutincandidat").html('');
+                    $("#reponsescrutin").html('');
+                    $("#boutonvoter").html('');
+                    var indexcandidat;
+                    for (var i = 0; i < obj.participant.length; i++) {
+                        //teste si l'utilissateur fait partie des participants
+                        if (obj.participant[i][0].trim() === email) {
+                            //On récupere ses nombre de  procurations
+                            procuration = obj.participant[i][1]
+                            procurationinfunction = obj.participant[i][1]
+                            peutvoter = obj.participant[i][2];
+                            indexcandidat = i;
+                            //Teste si le scrutin est clot
+                            if (obj.validballot === "false") {
+
+                                $("#affchescrutincandidat").append("<p>La question : " + obj.thequestion + " </p>")
+                                $("#affchescrutincandidat").append("<p style='color:white' 'color> Le scrutin est clot, voici les taux de partcipations pour chaque réponse : </p> ")
+
+                                var tabtauxreponse = Object.keys(obj.nbreponse)
+                                //Affiche le taux de participation pour chaque réponse et les commentaires
+                                for (var k = 0; k < obj.answer.length; k++) {
+                                    console.log(obj.nbreponse)
+                                    var taux = obj.nbreponse[tabtauxreponse[k]];
+                                    console.log("le taux \n")
+                                    console.log(taux)
+                                    //Teste si le nombre de vote est supérieru a 0, pour ne pas faire de division par 0
+                                    if (obj.nbvote === 0 || obj.nbreponse[tabtauxreponse[k]] === 0 || obj.tauxdeparticiaption === 0) {
+                                        $("#affchescrutincandidat").append("<p > - " + obj.answer[k] + " : 0 % (" + obj.nbreponse[tabtauxreponse[k]] + " vote(s)) </p>")
+                                    } else {
+                                        taux = (taux / obj.nbvote) * 100;
+
+                                        $("#affchescrutincandidat").append("<p > - " + obj.answer[k] + " : " + taux + " % (" + obj.nbreponse[tabtauxreponse[k]] + " vote(s)) </p>")
+                                    }
+                                }
+                                $("#affchescrutincandidat").append("<p>Taux de participation : " + obj.tauxdeparticiaption + " % </p>")
+                                $("#affchescrutincandidat").append("<p>---------------------------------------------------------------------------------</p>")
+
+                            } else
+                                //Teste  l'utilisateur a déja répoondu au scrutin, et affiche sa réponse et le taux de participation
+                            if (obj.participant[i][2] === "true") {
+                                $("#affchescrutincandidat").html("<p> Vous avez dejà repondu au scrutin " + numeroscrutin + ", votre réponse est : " + obj.participant[i][3] + "  </p>")
+                                $("#affchescrutincandidat").append("<p > <u>La question : " + obj.thequestion + " </u> </p>")
+                                $("#affchescrutincandidat").append("<p> Le taux de participation est de  " + obj.tauxdeparticiaption + " % </p>")
+                                $("#affchescrutincandidat").append("<p> ----------------------------------------------------------------------------------------</p>")
+                                //affihce le scrutin si y'a des réponses
+                            } else if (obj.answer) {
+                                $("#affchescrutincandidat").html(
+                                    "<span   style=\"color:white\"> Organisateur du scrutin : " + obj.ownerscrutin + " <br> <br>" +
+                                    "</span>" +
+                                    "<span   style=\"color:white\"> Le taux de participation est de  " + obj.tauxdeparticiaption + " %  <br> <br>" +
+                                    "</span>" +
+                                    "<span    style=\"font-size: 40px; color:red \"> Attention, vous avez le droit de voter qu'une fois !(En l'absence de procuration) <br> <br>" +
+                                    "</span>" +
+                                    "<span style=\"font-size: 30px; color:white \" id = " + obj.thequestion + "  > <u> Question :     " + obj.thequestion + " </u> <br> <br>" +
+                                    "</span>" +
+                                    "<span   style=\"color:white\"> Veuillez choisir parmi ces réponses : <br> <br> " +
+                                    "</span>");
+
+                                //récupère l'index des réponses dans mon tableau qui contient les nombre absolue des réponses
+                                tableauxdesnbreponses = Object.keys(obj.nbreponse)
+                                //recupére les réponses
+                                tableaudesreponses = obj.answer;
+                                //affiche la réponse pour que le client puisse voter
+                                for (var j = 0; j < obj.answer.length; j++) {
+                                    $("#reponsescrutin").append(
+                                        "<span  style=\"color:white\"> " + obj.answer[j] + "  " +
+                                        "</span>" +
+                                        "<input style=\"color:white\" type=\"radio\" name=\"lareponse\" value= " + tableauxdesnbreponses[j] + "  >  <br /> <br />  "
+                                    );
+
+                                }
+                                //Afficher le nombre de procurations du client
+                                $("#reponsescrutin").append("<p> Vous avez : " + procuration + " procurations  </p>")
+                                //le bouton pour que le client puisse voter
+                                $("#boutonvoter").append("<input onclick='envoielevote()' type='button' id ='voter' name='voter'  value='Je vote'>");
+                                $("#boutonvoter").append("<p> -------------------------------------------------------------------------------------- </p>");
+
+
+                            }
+                        }
+                    }
+
+                }
+            ).fail(function (e) {
+                console.log(e);
+            });
+        }
+
+        //Envoie les réponse du vote
+        function envoielevote() {
+            // decremente le nombre de procuration lorsq'on vote
+            procuration -= 1
+            //recupère le tableau où il y'a la réponse du vote
+            let reponsevote = $("form[name='reponsevote']").serializeArray()
+            //récupré l'index de la réponse dans mon tableau où il y a le nombre absolue de chaque réponse
+            var indexdelareponse = tableauxdesnbreponses.indexOf(reponsevote[0].value);
+
+            //Objet contenant tout les donnés utile pour mettre a jour notre base de donné
+            let data = {
+                'numeroscrutin': numeroscrutin,
+                'reponse': tableaudesreponses[indexdelareponse],
+                'email': sessionStorage.getItem('email'),
+                'peutvoter': peutvoter,
+                'nbreponse': reponsevote[0].value
+            }
+
+            $.ajax({
+                method: "POST",
+                dataType: "json",
+                url: "gerereponse.php",
+                data: {"data": data}
+            }).done(function (obj) {
+
+                    //Teste si le client a voté et qu'il lui reste des procurations
+                    if (obj === "yess") {
+                        $("#reponsescrutin").append("<p> Il vous reste  : " + procuration + " procurations  </p>")
+                        //Teste si les procurations du client sont a zéro
+                        if (procuration < 0) {
+                            console.log("j'ai modifié")
+                            $("#affchescrutincandidat").html('<p> Votre vote a bien été pris en compte  </p>');
+                            $("#reponsescrutin").html('');
+                            $("#boutonvoter").html('');
+                        }
+
+                    } else {
+                        console.log("j'ai pas modifié")
+                    }
+
+                }
+            ).fail(function (e) {
+                console.log(e);
+            });
+        }
+
+
+    </script>
+
+
+</head>
+
+<body>
+
+
+<h1>
+    Galaxyvote
+</h1>
+<p id="message1">
+
+</p>
+
+<div id="affiche-candidat-election">
+    <div id="afficheownerscrutin">
+    </div>
+    <div id="affchescrutincandidat">
+
+    </div>
+    <form id=' reponsevote' name='reponsevote'>
+        <div id="reponsescrutin"></div>
+        <div id="boutonvoter"></div>
+    </form>
+
+
+</div>
+
+<div id="voirscrutinowner">
+</div>
+<div id="ownerscrutin">
+</div>
+<div id="owneranswer"></div>
+
+
+<div align="center" class="pageweb">
+
+    <p>
+        Mail
+        <input type='email' name='email' id='email' onchange="email(this.value)">
+    </p>
+
+    <p> Mot de passe
+        <input type="password" id="password" name="password" onchange="password(this.value)">
+    </p>
+
+    <p>
+        <button onclick="login()">Connecter-vous</button>
+        ou <a href="suscribe.html">Inscription</a>
+    </p>
+
+    <p id="message"></p>
+</div>
+
+<p id="connexionvalidate">
+
+</p>
+
+
+</body>
+</html>

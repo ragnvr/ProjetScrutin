@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="fr" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        let nbanswer = 1;
+
+        //fonction qui permet de rajouter les input texte a chaque qu'on ajouter une réponse pour le scrutin
+        function answer() {
+            console.log("J'ai appuyé sur le bouton ajouter une réponse ")
+            let nameanswer = "answer-" + nbanswer++
+            $("<br> <textarea type='text' name=" + nameanswer + " id='thequestion' style= 'resize:none'  >   </textarea> <br> ").insertBefore("#addanswer");
+
+        }
+
+        let nbautre = 1;
+        let nbprocuautre = 1
+
+        //fonction qui permtet de rajouet un nouveau partucipant avec des procurations ou pas
+        function addautre() {
+            let nameautre = "autre-" + nbautre++
+            $("<br><form  id='mailautre' name='mailautre'> <input type=\"email\" name=" + nameautre + "     style= 'resize:none'  >   " +
+                " <p> 1 Procuration <input type='radio' name = " + 'procuration' + nbprocuautre + "  value = '1'    />   </p>" +
+                " <p> 2 Procuration <input type='radio' name = " + 'procuration' + nbprocuautre + "  value = '2'    /></p>" +
+                " <p>  Aucune Procuration <input type='radio' name = " + 'procuration' + nbprocuautre + "  value = '0'   checked /></p></form>"
+            ).insertBefore("#addautre");
+            nbprocuautre++
+
+        }
+
+        //Fonction qui permet de supprimer un participant dans la liste des participants
+        //Focntion qui a été pris sur internet
+        function removeItem(btn) {
+            var row = btn.parentNode.parentNode;
+            row.parentNode.removeChild(row);
+
+        }
+
+        let etu = [];
+
+        //fonction qui permet de génere la liste des étudiants en infos
+        function genereinfo(id) {
+            let etudiant = id;
+            console.log(etudiant)
+
+            $.ajax({
+                method: "GET",
+                dataType: "json",
+                url: "genereetudiant.php",
+                data: {"etudiant": etudiant}
+            }).done(function (obj) {
+
+                let idetu = "etu-";
+                //Teste si la case de "etudiants info est chécké"
+                if ($('input[name=etudiantinfo]').is(':checked')) {
+                    var length = obj.length
+                    //affiche la liste des étuidants
+                    for (var i = 0; i < obj.length; i++) {
+                        var procuration = [];
+                        $("#content").append(
+                            "<tr id= " + idetu + i + " data-index=" + idetu + i + " >" +
+                            "<td >" + obj[i]["firstname"] + " </td>" +
+                            "<td> " + obj[i]["lastname"] + " </td>" +
+                            "<td> " + obj[i]["email"] + " </td> " +
+                            "<td> <input type='radio' name = " + 'procuration' + i + "  value ='1'  /></td>" +
+                            "<td> <input type='radio' name = " + 'procuration' + i + "   value ='2'  /></td>" +
+                            "<td> <input type='radio' name = " + 'procuration' + i + "   value ='0' checked/></td>" +
+                            "<td> <input type='button' value='Supprimer' onclick='removeItem(this)'/></td>" +
+                            "</tr>")
+                        //récupére les emails de tout les étudiants
+                        etu.push(obj[i]["email"])
+                    }
+
+                } else {
+                    // si la case 'etudiant en infos' n'est pas chécké, on onleve le tableau des étudiants en info
+                    $("#content").empty()
+                }
+
+            }).fail(function (e) {
+                console.log("requete non reussi");
+
+            });
+        }
+
+
+        $(document).ready(function () {
+            //Si le bouton sauvegarder est cliqué
+            $("#sauvegarder").on('click', function (e) {
+                e.preventDefault() //pour annuler l'envoie du formulaire
+                let email = sessionStorage.getItem('email')
+                let values = $("form[name='scrutin']").serializeArray()
+                // On récupére le scrutin
+                let data = {
+                    'email': email,
+                    'form': values
+                }
+
+                var procurationetudiantinfo = []
+                //récupere toute les valeurs des procurations
+                $("#listEtudiantinfo :checked").each(function (i, e) {
+                    procurationetudiantinfo.push($(this).attr("value"))
+                })
+
+                //Code prit sur internet
+                // Récupère les particpants de la liste étudiants en info
+                var myRows = [];
+                var $headers = $('#listEtudiantinfo tr th ');
+                var $rows = $("#content tr").each(function (index) {
+                    $cells = $(this).find('td');
+                    myRows[index] = {};
+                    $cells.each(function (cellIndex) {
+                        myRows[index][$($headers[cellIndex]).html()] = $(this).html();
+                    });
+                });
+
+                //Stock dans une autre  variable pour m'en souvenir plus facilement
+                var listparticipantetudiant = myRows;
+
+
+                var rightData = [];
+                //Créé un nombre aléatoire pour le scrutin
+                var min = 10000;
+                var max = 99999;
+                let random = Math.floor(Math.random() * (max - min)) + min;
+
+                var participants = []
+                var user = {};
+                var answer = []
+                var mailautre = []
+                var procuautre = []
+                var autre = []
+
+                //Récupère les données pour les participants qui sont rajouté por l'organisateur
+                let dataautre = $("form[name='mailautre']").serializeArray()
+
+                // allocation tableau 2d pour autre pour qu'ils contiennent le mail et les procurations
+                for (var i = 0; i < dataautre.length; i++) {
+                    autre[i] = new Array(dataautre.length / 2);
+                }
+
+                // recuperation des emails des participants  ajouter par l'organistaeur
+                for (var i = 0; i < dataautre.length; i++) {
+                    var str = dataautre[i].name
+                    var indexautre = str.indexOf("autre");
+                    if (indexautre !== -1) {
+                        mailautre.push(dataautre[i].value);
+                    }
+
+                }
+
+                // recuperation des procuration des particpants ajouter par l'organistaeur
+                for (var i = 0; i < dataautre.length; i++) {
+                    var str = dataautre[i].name
+                    var indexautre = str.indexOf("procuration");
+                    if (indexautre !== -1) {
+                        procuautre.push(dataautre[i].value);
+                    }
+
+                }
+
+
+                //met dans un seul tableau les mails et les procurations des participants ajouter par l'organisateur
+                for (var i = 0; i < dataautre.length / 2; i++) {
+                    //Le mail du particiapant ajouter par l'organisteur
+                    autre[i][0] = mailautre[i]
+                    //Le procuration du participant ajouter par l'organisateur
+                    autre[i][1] = procuautre[i]
+                    //On lui met a false donc il peut voter
+                    autre[i][2] = false
+                    //Cette case va contenir la réponse du scrutin auquel il va voter
+                    autre[i][3] = ""
+                }
+
+                //Si le participant ajouter par l'organisteur n'a pas de mail alors on supprimer le particpant
+                for (var i = 0; i < autre.length; i++) {
+                    if (autre[i][0] === undefined) {
+                        autre.splice(i, 1)
+                    }
+
+                }
+
+                //Allocation de notre tableau 2d qui va contenir la liste des étudiants en tant que participants
+                for (var i = 0; i < listparticipantetudiant.length; i++) {
+                    participants[i] = new Array(listparticipantetudiant.length);
+                }
+
+                for (var i = 0; i < listparticipantetudiant.length; i++) {
+                    //ajoute l'email du participants a notre liste de participants
+                    participants[i][0] = listparticipantetudiant[i]["Email"];
+                    var str = procurationetudiantinfo[i]
+                    var index1 = str.indexOf("1");
+                    var index2 = str.indexOf("2");
+                    var index0 = str.indexOf("0");
+                    //teste si la procuration est egale a 1
+                    if (index1 !== -1) {
+                        participants[i][1] = 1;
+                        //teste si la procuration est egale a 2
+                    } else if (index2 !== -1) {
+                        participants[i][1] = 2;
+                        //teste si la procuration est egale a 0
+                    } else if (index0 !== -1) {
+                        participants[i][1] = 0;
+                    }
+                    //met false a l'etudiant en info, dons sa case qui determine s'il a déjà voter ou pas
+                    participants[i][2] = false;
+                    //initialise la case auqueil il y'aura la réponse a son scrutin
+                    participants[i][3] = "";
+                }
+
+                //parcours le scrutin créé par l'organisteur une fois que client a appuyé sur "sauvegarder"
+                for (var i = 0; i < data["form"].length; i++) {
+                    var str = data["form"][i]["name"];
+                    var index = str.indexOf("answer");
+                    var index1 = str.indexOf("autre");
+
+                    //Lorsqu'on  trouve les réponses du scrutin
+                    if (index !== -1) {
+                        //ajoute chaque réponses a mon tableau "answer" pour m'en rappeler plus facilement
+                        answer.push(data["form"][i]["value"])
+                    } else if (index1 !== -1) {
+                        //ajoute l'email du  participant qui a été rajouté par l'organisateur a notre tableau "participants "
+                        participants.push(data["form"][i]["value"])
+                    }
+                }
+
+                //Permet de récuéper le nombre absolue de chaque réponse, car c'était compliqué de le faire directement avece la valeur de la réponse, car la valeur de la réponse contenait des espaces
+                let nbreponse = {};
+                // si il y'a des réponses
+                if (answer.length > 0) {
+                    for (var k = 0; k < answer.length; k++) {
+                        //On enleve les espaces de notre réponse et on insére comme clé dans notre objet "nbreponse" , et on initialise a 0
+                        nbreponse[answer[k].split(" ").join("")] = 0;
+                    }
+                }
+
+                //user va contenir tout les informations du scrutin
+                user.ownerscrutin = email;
+                user.nbscrutin = random;
+                user.thequestion = data["form"][0]["value"];
+                user.participant = participants;
+                user.tauxdeparticiaption = 0;
+                user.validballot = true;
+                user.nbreponse = nbreponse;
+                user.nbvote = 0;
+
+                //ajoute les participants qui ont été rajouté par l'organisteur la où il y'a tout les participants
+                for (var i = 0; i < autre.length; i++) {
+                    if (autre[i][0] !== undefined) {
+                        user.participant.push(autre[i])
+                    }
+
+                }
+
+                user.answer = answer;
+                rightData = JSON.stringify(rightData);
+
+
+                $.ajax({
+                    method: "POST",
+                    //dataType: "json",
+                    url: "gerescrutin.php",
+                    data: {
+                        "user": user
+                    }
+
+                }).done(function (obj) {
+
+                    //Teste si la requeste s'est bien passé
+                    if (obj == true) {
+                        //Affiche le numéro du scrutin
+                        $("#scrutin").replaceWith($("#succes").html("<span class='ko' style=\"color:white\"> Scrutin Sauvegardé, numéro du scrutin : " + random + ".   </span>"));
+
+                    } else {
+                        console.log("Je suis dans le else")
+                        $("#scrutin").replaceWith($("#succes").html("<span class='ko' style=\"color:white\"> Erreur lors de la sauvegarde .   </span>"));
+                    }
+
+                }).fail(function (e) {
+                    console.log("requete non reussi")
+                    console.log(e + "erreur");
+                    $("#message").html("<span class='ko' style=\"color:white\"> Error: network problem  </span>");
+                });
+
+
+            })
+
+
+        })
+
+
+    </script>
+
+</head>
+<body>
+<h1>
+    Galaxyvote
+</h1>
+
+<div id="succes"></div>
+
+
+<form id="scrutin" name="scrutin">
+    <label for="thequestion" style='color:white; '> Veuillez poser votre question : </label>
+    <!--    <br>-->
+    <textarea name='thequestion' id='thequestion' style='resize:none'>  </textarea>
+
+    <br>
+    <br>
+
+    <a id="addanswer" class="icon-link" onclick="answer()" href="#"><img
+            src="kisspng-computer-icons-plus-sign-clip-art-plus-sign-5b4bfbdff0b3a7.2950963015317063359859-removebg-preview.png"
+            width='15' height='15'><span style='color:white'>Ajouter une réponse</span></a></p>
+
+    </p>
+
+    <div id='voterslist'>
+        <p>
+            Choissisez la liste des votants :
+        </p>
+        <p>
+            Étudiants infos
+            <input type="checkbox" onclick="genereinfo(this.id)" name="etudiantinfo" id="etudiantinfo">
+        </p>
+<!--        tableau qui va contenir la liste des étudiants en info -->
+        <table id="listEtudiantinfo" style="color: #FFFFFF">
+            <thead>
+            <tr>
+                <th>Prenom</th>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>1 Procuration</th>
+                <th>2 Procuration</th>
+                <th>Pas de procuration</th>
+
+                <th>Supprimer</th>
+            </tr>
+            </thead>
+
+            <tbody id="content">
+            </tbody>
+        </table>
+<!--    Permet de rajouter un participants avec un email -->
+        <p>
+            <a id="addautre" class="icon-link" onclick="addautre()" href="#"><img
+                    src="kisspng-computer-icons-plus-sign-clip-art-plus-sign-5b4bfbdff0b3a7.2950963015317063359859-removebg-preview.png"
+                    width='15' height='15'><span style='color:white'>Ajouter un participant avec un email</span></a></p>
+        <br>
+
+    </div>
+<!-- Le bouton pour sauvegarder le scrutin -->
+    <input id="sauvegarder" type="submit" value="Sauvegarder">
+</form>
+
+</body>
+</html>

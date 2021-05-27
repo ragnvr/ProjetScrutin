@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <title>Site de vote </title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        function email(newEmail) {
+            console.log("Le nouveau mail insérer est : "  + newEmail )
+        }
+        function password(newPassword) {
+            console.log("Le nouveau mot de passe insérer est : "  + newPassword )
+
+        }
+
+        function suscribe() {
+            let email = $("#email").val();
+            let password = $("#password").val();
+            console.log("Je suis dans suscribe")
+            $.ajax({
+                method: "GET",
+                // dataType: "json",
+                url: "checksuscribe.php",
+                data: {"email": email, "password": password}
+            }).done(function (obj) {
+                console.log(obj)
+                if (obj == true) {
+                    console.log("Je suis dans le if")
+                    $("#message").html("<span class='ko' style=\"color:white\"> Vous êtes déja inscrit    </span>");
+                    $(".pageweb").empty()
+
+                } else {
+                    console.log("Je suis dans le else")
+                    $("#message").html("<span class='ko' style=\"color:white\"> Mail ou Mot de passe invalide   </span>");
+                }
+
+            }).fail(function (e) {
+                console.log(e + "erreur");
+                $("#message").html("<span class='ko' style=\"color:white\"> Error: network problem  </span>");
+            });
+        }
+    </script>
+</head>
+<body>
+<div align="center" class="pageweb">
+
+    <p>
+        Mail
+        <input type='email' name='email' id='email' onchange="email(this.value)">
+    </p>
+
+    <p> Mot de passe
+        <input type="password" id="password" name="password" onchange="password(this.value)">
+    </p>
+
+    <p>
+        <button onclick="suscribe()">Inscription</button>
+    </p>
+
+    <p id="message"></p>
+</div>
+</body>
+</html>
